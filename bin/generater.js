@@ -20,13 +20,14 @@ var version = pkg.version;
 process.exit = exit;
 
 //CLI
-
 program
   .version(version, '  --version')
   .usage('[options] [dir]')
-  .option('-d --demo', 'add demo dir support', renamedOption('--demo', '--view=demo'))
+  .option('    --init', 'init prj dir')
+  .option('-d, --demo', 'add demo dir support', renamedOption('--demo', '--view=demo'))
   .option('    --hbs', 'add handlebars engine support', renamedOption('--hbs', '--view=hbs'))
   .option('-v, --view <engine>', 'add view <engine> support (dust|ejs|hbs|hjs|jade|pug|twig|vash) (defaults to hbs)')
+  .option('-c, --css <engine>', 'add stylesheet <engine> support (less|stylus) (defaults to plain less)')
   .option('    --git', 'add .gitignore')
   .option('-f, --force', 'force on non-empty directory')
   .parse(process.argv)
@@ -34,6 +35,20 @@ program
 if (!exit.exited) {
   main();
 }
+
+/**
+*Install an around function
+*/
+// function around(obj, method, fn) {
+//   var old = obj[method];
+//   obj[method] = function () {
+//       var args = new Array(arguments.length);
+//       for(var i=0; i< args.length; i++) {
+//         args[i] = arguments[i];
+//       }
+//       return fn.call(this, old, args);
+//   }
+// }
 
 /**
 *Main program
@@ -56,24 +71,71 @@ function main() {
       "use `--view=hbs' or `--help' for additional options")
     program.view = 'hbs'
   }
+
+  var rlp = readline.createInterface({
+    input:process.stdin,
+    output:process.stdout
+  });
+  function read(question, callback) {
+    return function() {
+      return new Promise(resolve => {
+        rlp.question(question, function(answer){
+            callback(/^y|yes|ok|true$/i.test(answer));
+            resolve(answer);
+        });
+      });
+    };
+  }
+  function close() {
+    return rlp.close();
+  }
+  function compose(...args) {
+    return args.reduce((a, b) => {
+      return function() {
+        return a().then(() => {
+          return b();
+        });
+      };
+    });
+  }
+
+  rlp.on('close', function () {
+
+  });
+
   // Generate application
   emptyDirectory(destinationPath, function(empty) {
+    var total;
+    var step1 = read('do you need test? [y/N]', function (ok) {
+      if (ok) {
+        program.test = true;
+      }
+    });
+    var step2 = read('do you need demo? [y/N]', function (ok) {
+      if (ok) {
+        program.demo = true;
+      }
+    });
+    var step3 = read('destination is not empty, continue? [Y/N] ', function(ok) {
+      console.log('ok---', ok);
+      if (ok) {
+        process.stdin.destroy();
+        createApplication(appName, destinationPath);
+      } else {
+        console.error('aborting');
+        exit(1);
+      }
+    });
     if (empty || program.force) {
+      var a = compose(step1, step2);
+      compose(a, close)();
       createApplication(appName, destinationPath);
     } else {
-      confirm('destination is not empty, continue? [Y/N] ', function (ok) {
-        if (ok) {
-          process.stdin.destroy();
-          createApplication(appName, destinationPath);
-        } else {
-          console.error('aborting');
-          exit(1);
-        }
-      });
+      var a = compose(step1, step2, step3)();
+      // compose(a, close)();
     }
   });
 }
-
 /**
  * Display a warning similar to how errors are displayed by commander.
  *
@@ -102,7 +164,7 @@ function launchedFromCmd () {
  * @param {String} path
  */
  function createApplication(name, path) {
-  var wait = 5;
+  var wait = 2;
   function complete() {
     if (--wait) {
       return;
@@ -113,43 +175,75 @@ function launchedFromCmd () {
     console.log('     %s cd %s && npm install', prompt, path);
     console.log();
     console.log('   run the app:');
-    if (launchedFromCmd()) {
-      console.log('     %s SET DEBUG=%s:* & npm start', prompt, name);
-    } else {
-      console.log('     %s DEBUG=%s:* npm start', prompt, name);
-    }
-    console.log();
+    // if (launchedFromCmd()) {
+    //   console.log('     %s SET DEBUG=%s:* & npm start', prompt, name);
+    // } else {
+    //   console.log('     %s DEBUG=%s:* npm start', prompt, name);
+    // }
+    // console.log();
   }
-  // JavaScript
-  // var app = loadTemplate('js/app.js');
-  // var www = loadTemplate('js/www');
 
-  //readme
-  var readme = loadTemplate('md/README.md');
-
-  // App name
-  // www.locals.name = name
-
-  // App modules
-  // app.locals.modules = Object.create(null);
-  // app.locals.uses = [];
 
   mkdir(path, function () {
+        // test
+        mkdir(path + '/test');
+    // index.js
+    copyTemplate('js/index.js', path + '/src/index.js');
+    // README
+    copyTemplate('md/README.md', path + '/README.md');
+    //.eslintrc
+    copyTemplate('eslint/eslintrc', path + '/.eslintrc');
+    //.babelrc
+    copyTemplate('babel/babelrc', path + '/.babelrc');
+    // src
     mkdir(path + '/src', function () {
       mkdir(path + '/src/img');
       mkdir(path + '/src/modules', function () {
+        // index.less/index.css
         switch (program.css) {
-          case 'less': 
-          copyTemplate('css/style.less', path + '/src/index.less');
+          case 'css': 
+          copyTemplate('css/style.css', path + '/src/index.css');
           break;
           default: 
-          copyTemplate('css/style.css', path + '/src/index.css');
+          copyTemplate('css/style.less', path + '/src/index.less');
+          break;
         }
+        complete();
       });
 
     });
   });
- }
+
+  if (program.demo) {
+    mkdir(path + '/demo', function () {
+      copyTemplate('html/index.html', path + '/demo/index.html');
+      complete();
+    });
+  }
+  // package.json
+  var pkg = {
+    "name": name,
+    "version": "0.0.0",
+    "main": 'dist/index.js',
+    "scripts": {
+      "test": ''
+    },
+    "dependencies": {
+    },
+    "devDependencies": {
+      "babel-loader": "7.0.0",
+      "babel-core": "6.25.0",
+      "babel-preset-es2015": "6.24.1",
+    }
+  }
+  // write files
+  write(path + '/package.json', JSON.stringify(pkg, null, 2) + '\n');
+
+  if (program.git) {
+    copyTemplate('js/gitignore', path + '/.gitignore')
+  }
+  complete();
+}
 
 /**
  * echo str > path.
@@ -202,20 +296,21 @@ function loadTemplate (name) {
   }
 }
 
-/**
-* 
-*/
-function confirm(msg, callback) {
-  var r1 = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+// /**
+// * Prompt for confirmation on STDOUT/STDIN 
+// */
+// function confirm (msg, callback) {
+//   var r1 = readline.createInterface({
+//     input: process.stdin,
+//     output: process.stdout
+//   });
 
-  r1.question(msg, function (input) {
-    r1.close();
-    callback(/^y|yes|ok|true$/i.test(input));
-  });
-}
+//   r1.question(msg, function (input) {
+//     r1.close();
+//     callback(/^y|yes|ok|true$/i.test(input));
+//   });
+// }
+
 
 /**
 *Check if the given directory 'path' is empty
@@ -248,7 +343,7 @@ function exit(code) {
 
   exit.exited = true;
 
-  streams.forEach(function (stream) {
+  stream.forEach(function (stream) {
     // submit empty write request and wait for completion
     draining += 1;
     stream.write('', done);
@@ -257,8 +352,17 @@ function exit(code) {
   done();
 }
 
-function createAppName() {
 
+/**
+ * Create an app name from a directory path, fitting npm naming requirements.
+ *
+ * @param {String} pathName
+ */
+function createAppName(pathName) {
+  return path.basename(pathName)
+    .replace(/[^A-Za-z0-9.()!~*'-]+/g, '-')
+    .replace(/^[-_.]+|-+$/g, '')
+    .toLowerCase()
 }
 
 /**
@@ -274,12 +378,6 @@ function renamedOption(originName, newName) {
   }
 }
 
-/**
-*Install an around function
-*/
-function around(obj, method, fn) {
-
-}
 
 
 

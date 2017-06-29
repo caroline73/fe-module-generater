@@ -19,6 +19,7 @@
   "author": "zhangshaohui",
   "license": "ISC",
   "dependencies": {
+    "chalk": "^1.1.3",
     "commander": "2.9.0",
     "mkdirp": "0.5.1"
   }

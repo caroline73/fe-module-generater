@@ -2,10 +2,7 @@
   "name": "pgc-fe-generator",
   "version": "1.0.0",
   "description": "generater templates",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "main": "bin/generater.js",
   "repository": {
     "type": "git",
     "url": "git@git.pandatv.com:zhangshaohui/pgc-fe-generator.git"
@@ -19,9 +16,6 @@
   "author": "zhangshaohui",
   "license": "ISC",
   "dependencies": {
-    "commander": "^2.9.0",
-    "ejs": "^2.5.6",
-    "mkdirp": "^0.5.1",
-    "util": "^0.10.3"
+    "commander": "2.9.0"
   }
 }

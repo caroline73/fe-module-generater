@@ -1,39 +1,38 @@
 #!/usr/bin/env node
 
-var ejs = require('ejs');
 var fs = require('fs');
 var path = require('path');
+var readline = require('readline');
 var mkdirp = require('mkdirp');
 var program = require('commander');
-var readline = require('readline');
 var util = require('util');
 
 var MODE_0666 = parseInt('0666', 8)
 var MODE_0755 = parseInt('0755', 8)
 
-var _exit = process.exit;
 var pkg = require('../package.json');
 var version = pkg.version;
 
-// Re-assign process.exit because of commander
-// TODO: Switch to a different command framework
-process.exit = exit;
-
 program
-  .version(version, '  --version')
-  .usage('[options] [dir]')
-  .option('    --init', 'init prj dir')
-  .option('-d, --demo', 'add demo dir support', renamedOption('--demo', '--view=demo'))
-  .option('    --hbs', 'add handlebars engine support', renamedOption('--hbs', '--view=hbs'))
-  .option('-v, --view <engine>', 'add view <engine> support (dust|ejs|hbs|hjs|jade|pug|twig|vash) (defaults to hbs)')
-  .option('-c, --css <engine>', 'add stylesheet <engine> support (less|stylus) (defaults to plain less)')
+  .version(version, '    --version')
+  .usage('<dir> [options] ')
+  .arguments('<dir>')
+  .action(function (dir) {
+     dirValue = dir;
+  })
+  .description('<dir> must be input')
   .option('    --git', 'add .gitignore')
   .option('-f, --force', 'force on non-empty directory')
   .parse(process.argv)
 
-if (!exit.exited) {
-  main();
+if (typeof dirValue == 'undefined') {
+  console.error('must be input dir name!\n');
+  console.error('example:\n');
+  console.error('generater dir')
+  process.exit(1);
 }
+
+main();
 
 var rlp = readline.createInterface({
   input:process.stdin,
@@ -80,22 +79,19 @@ function delDir(path) {
 }
 
 function main() {
-  // Path input path or .
   var destinationPath = program.args.shift() || '.';
-  // App name
-  var appName = createAppName(path.resolve(destinationPath)) || 'hello-world';
-  var step1 = read('do you need test, continue? [y/N]', function (ok) {
+  var appName = createAppName(path.resolve(destinationPath));
+  var step1 = read('do you need test, continue? [y/N] ', function (ok) {
     if (ok) {
       program.test = true;
     }
   });
-  var step2 = read('do you need demo, continue? [y/N]', function (ok) {
+  var step2 = read('do you need demo, continue? [y/N] ', function (ok) {
     if (ok) {
       program.demo = true;
     }
   });
   var a = compose(step1, step2);
-  // Generate application
   emptyDirectory(destinationPath, function(empty) {
     var step3 = read('destination is not empty, continue? [y/N] ', function(ok) {
       if (ok) {
@@ -103,7 +99,7 @@ function main() {
         createApplication(appName, destinationPath);
       } else {
         console.error('aborting');
-        exit(1);
+        process.exit(1);
       }
     });
     if (empty || program.force) {
@@ -116,11 +112,11 @@ function main() {
   });
 }
 
- function warning (message) {
+function warning (message) {
   message.split('\n').forEach(function (line) {
     console.error('  warning: %s', line);
   });
- }
+}
 
 function launchedFromCmd () {
   return process.platform === 'win32' &&
@@ -186,23 +182,17 @@ function createApplication(name, path) {
   });
 }
 
-// function complete(path) {
-//   var prompt = launchedFromCmd() ? '>' : '$';
-//   console.log('   install dependencies:');
-//   console.log('     %s cd %s && npm install', prompt, path);
-// }
-
-function write (path, str, mode) {
+function write(path, str, mode) {
   fs.writeFileSync(path, str, { mode: mode || MODE_0666 });
   console.log('   \x1b[36mcreate\x1b[0m : ' + path);
 } 
 
-function copyTemplate (from, to) {
+function copyTemplate(from, to) {
   from = path.join(__dirname, '..', 'templates', from);
   write(to, fs.readFileSync(from, 'utf-8'));
 }
 
- function mkdir (path, fn) {
+ function mkdir(path, fn) {
   mkdirp(path, MODE_0755, function (err) {
     if (err) {
       throw err;
@@ -212,7 +202,7 @@ function copyTemplate (from, to) {
   });
  }
 
-function loadTemplate (name) {
+function loadTemplate(name) {
   var contents = fs.readFileSync(path.join(__dirname, '..', 'templates', name), 'utf-8');
   var locals = Object.create(null)
   function render () {
@@ -232,28 +222,6 @@ function emptyDirectory(path, fn) {
     fn(!files || !files.length);
   })
 }
-/**
- * Graceful exit for async STDIO
- */
-function exit(code) {
-  // flush output for Node.js Windows pipe bug
-  // https://github.com/joyent/node/issues/6247 is just one bug example
-  // https://github.com/visionmedia/mocha/issues/333 has a good discussion
-  function done() {
-    if (!(draining--)) {
-      _exit(code);
-    }
-  }
-  var draining = 0;
-  var stream = [process.stdout, process.stderr];
-  exit.exited = true;
-  stream.forEach(function (stream) {
-    // submit empty write request and wait for completion
-    draining += 1;
-    stream.write('', done);
-  });
-  done();
-}
 
 function createAppName(pathName) {
   return path.basename(pathName)
@@ -262,9 +230,3 @@ function createAppName(pathName) {
     .toLowerCase()
 }
 
-function renamedOption(originName, newName) {
-  return function (val) {
-    warning(util.format("option `%s' has been renamed to `%s'",  originalName, newName));
-    return val;
-  }
-}

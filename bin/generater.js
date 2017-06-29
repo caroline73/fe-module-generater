@@ -19,7 +19,6 @@ var version = pkg.version;
 // TODO: Switch to a different command framework
 process.exit = exit;
 
-//CLI
 program
   .version(version, '  --version')
   .usage('[options] [dir]')
@@ -36,27 +35,14 @@ if (!exit.exited) {
   main();
 }
 
-/**
-*Install an around function
-*/
-// function around(obj, method, fn) {
-//   var old = obj[method];
-//   obj[method] = function () {
-//       var args = new Array(arguments.length);
-//       for(var i=0; i< args.length; i++) {
-//         args[i] = arguments[i];
-//       }
-//       return fn.call(this, old, args);
-//   }
-// }
-
 var rlp = readline.createInterface({
   input:process.stdin,
   output:process.stdout
 });
+
 function read(question, callback) {
   return function() {
-    return new Promise(resolve => {
+    return new Promise((resolve,reject) => {
       rlp.question(question, function(answer){
           callback(/^y|yes|ok|true$/i.test(answer));
           resolve(answer);
@@ -64,9 +50,11 @@ function read(question, callback) {
     });
   };
 }
+
 function close() {
   return rlp.close();
 }
+
 function compose(...args) {
   return args.reduce((a, b) => {
     return function() {
@@ -76,9 +64,21 @@ function compose(...args) {
     };
   });
 }
-/**
-*Main program
-*/
+
+function delDir(path) {
+  var files = [];
+  files = fs.readdirSync(path);
+  files.forEach(function (file, index) {
+    var curPath = path + '/' + file;
+    if (fs.statSync(curPath).isDirectory()) {
+      delDir(curPath);
+    } else {
+      fs.unlinkSync(curPath);
+    }
+  });
+  fs.rmdirSync(path);
+}
+
 function main() {
   // Path input path or .
   var destinationPath = program.args.shift() || '.';
@@ -99,7 +99,7 @@ function main() {
   emptyDirectory(destinationPath, function(empty) {
     var step3 = read('destination is not empty, continue? [y/N] ', function(ok) {
       if (ok) {
-      //   process.stdin.destroy();
+        delDir(destinationPath);
         createApplication(appName, destinationPath);
       } else {
         console.error('aborting');
@@ -115,36 +115,19 @@ function main() {
     }
   });
 }
-/**
- * Display a warning similar to how errors are displayed by commander.
- * @param {String} message
- */
+
  function warning (message) {
   message.split('\n').forEach(function (line) {
     console.error('  warning: %s', line);
   });
  }
-/**
- * Determine if launched from cmd.exe
- */
+
 function launchedFromCmd () {
   return process.platform === 'win32' &&
     process.env._ === undefined
 }
-/**
- * Create application at the given directory `path`.
- * @param {String} path
- */
- function createApplication(name, path) {
-  // var wait = 2;
-  // function complete() {
-  //   if (--wait) {
-  //     return;
-  //   }
-  //   var prompt = launchedFromCmd() ? '>' : '$';
-  //   console.log('   install dependencies:');
-  //   console.log('     %s cd %s && npm install', prompt, path);
-  // }
+
+function createApplication(name, path) {
   mkdir(path, function () {
     // test
     if (program.test) {
@@ -172,7 +155,6 @@ function launchedFromCmd () {
           copyTemplate('css/style.less', path + '/src/index.less');
           break;
         }
-        // complete();
       });
     });
     // index.js
@@ -201,35 +183,25 @@ function launchedFromCmd () {
     }
     // write files
     write(path + '/package.json', JSON.stringify(pkg, null, 2) + '\n');
-    // complete();
   });
-
-  var prompt = launchedFromCmd() ? '>' : '$';
-  console.log('   install dependencies:');
-  console.log('     %s cd %s && npm install', prompt, path);
 }
-/**
- * echo str > path.
- * @param {String} path
- * @param {String} str
- */
- function write (path, str, mode) {
+
+// function complete(path) {
+//   var prompt = launchedFromCmd() ? '>' : '$';
+//   console.log('   install dependencies:');
+//   console.log('     %s cd %s && npm install', prompt, path);
+// }
+
+function write (path, str, mode) {
   fs.writeFileSync(path, str, { mode: mode || MODE_0666 });
   console.log('   \x1b[36mcreate\x1b[0m : ' + path);
- } 
-/**
- * Copy file from template directory.
- */
+} 
+
 function copyTemplate (from, to) {
   from = path.join(__dirname, '..', 'templates', from);
   write(to, fs.readFileSync(from, 'utf-8'));
 }
-/**
- * Mkdir -p.
- *
- * @param {String} path
- * @param {Function} fn
- */
+
  function mkdir (path, fn) {
   mkdirp(path, MODE_0755, function (err) {
     if (err) {
@@ -239,11 +211,8 @@ function copyTemplate (from, to) {
     fn && fn();
   });
  }
- /**
- * Load template file.
- */
+
 function loadTemplate (name) {
-  // var contents = fs.readFileSync(path.join(__dirname, '..', 'templates', (name + '.ejs')), 'utf-8');
   var contents = fs.readFileSync(path.join(__dirname, '..', 'templates', name), 'utf-8');
   var locals = Object.create(null)
   function render () {
@@ -254,24 +223,7 @@ function loadTemplate (name) {
     render: render
   }
 }
-// /**
-// * Prompt for confirmation on STDOUT/STDIN 
-// */
-// function confirm (msg, callback) {
-//   var r1 = readline.createInterface({
-//     input: process.stdin,
-//     output: process.stdout
-//   });
 
-//   r1.question(msg, function (input) {
-//     r1.close();
-//     callback(/^y|yes|ok|true$/i.test(input));
-//   });
-// }
-/**
-*Check if the given directory 'path' is empty
-×
-*/
 function emptyDirectory(path, fn) {
   fs.readdir(path, function(err, files) {
     if (err && err.code !== 'ENOENT') {
@@ -302,23 +254,14 @@ function exit(code) {
   });
   done();
 }
-/**
- * Create an app name from a directory path, fitting npm naming requirements.
- *
- * @param {String} pathName
- */
+
 function createAppName(pathName) {
   return path.basename(pathName)
     .replace(/[^A-Za-z0-9.()!~*'-]+/g, '-')
     .replace(/^[-_.]+|-+$/g, '')
     .toLowerCase()
 }
-/**
- * Generate a callback function for commander to warn about renamed option.
- *
- * @param {String} originalName
- * @param {String} newName
- */
+
 function renamedOption(originName, newName) {
   return function (val) {
     warning(util.format("option `%s' has been renamed to `%s'",  originalName, newName));

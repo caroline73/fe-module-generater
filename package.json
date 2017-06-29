@@ -1,6 +1,6 @@
 {
   "name": "pgc-fe-generator",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "generater templates",
   "main": "bin/generater",
   "repository": {
@@ -19,6 +19,7 @@
   "author": "zhangshaohui",
   "license": "ISC",
   "dependencies": {
-    "commander": "2.9.0"
+    "commander": "2.9.0",
+    "mkdirp": "0.5.1"
   }
 }

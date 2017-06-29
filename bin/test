@@ -7,21 +7,19 @@ var  rl = readline.createInterface({
     output:process.stdout
 });
 
-function read(question) {
+function read(question, cb) {
   return function() {
     return new Promise(resolve => {
       rl.question(question,function(answer){
-          resolve(answer);
+        cb();
+        resolve(answer);
       });
     });
   };
 }
-
-
 function close() {
   return rl.close();
 }
-
 function compose(...args) {
   return args.reduce((a, b) => {
     return function() {
@@ -32,12 +30,11 @@ function compose(...args) {
   });
 }
 
-var a = compose(read('a?'), read('b?'), read('e?'));
-var b = compose(read('c?'), read('d?'));
-
-var total = compose(a, b, close);
-
-total();
+var a = compose(read('a?', function() {console.log('a')}), read('b?', function() {console.log('b');}), read('e?', function() {console.log('c');}), close);
+// var b = compose(read('c?'), read('d?'));
+// var total = compose(a, b, close);
+a();
+// total();
 
 
 // var s = ['a?', 'b?'];

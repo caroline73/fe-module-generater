@@ -50,6 +50,32 @@ if (!exit.exited) {
 //   }
 // }
 
+var rlp = readline.createInterface({
+  input:process.stdin,
+  output:process.stdout
+});
+function read(question, callback) {
+  return function() {
+    return new Promise(resolve => {
+      rlp.question(question, function(answer){
+          callback(/^y|yes|ok|true$/i.test(answer));
+          resolve(answer);
+      });
+    });
+  };
+}
+function close() {
+  return rlp.close();
+}
+function compose(...args) {
+  return args.reduce((a, b) => {
+    return function() {
+      return a().then(() => {
+        return b();
+      });
+    };
+  });
+}
 /**
 *Main program
 */
@@ -58,68 +84,22 @@ function main() {
   var destinationPath = program.args.shift() || '.';
   // App name
   var appName = createAppName(path.resolve(destinationPath)) || 'hello-world';
-
-  //View
-  if (program.view == undefined) {
-    if (program.hbs) {
-      program.view = 'hbs';
+  var step1 = read('do you need test, continue? [y/N]', function (ok) {
+    if (ok) {
+      program.test = true;
     }
-  }
-  // Default view engine
-  if (program.view === undefined) {
-    warning('the default view engine will not be hbs in future releases\n' +
-      "use `--view=hbs' or `--help' for additional options")
-    program.view = 'hbs'
-  }
-
-  var rlp = readline.createInterface({
-    input:process.stdin,
-    output:process.stdout
   });
-  function read(question, callback) {
-    return function() {
-      return new Promise(resolve => {
-        rlp.question(question, function(answer){
-            callback(/^y|yes|ok|true$/i.test(answer));
-            resolve(answer);
-        });
-      });
-    };
-  }
-  function close() {
-    return rlp.close();
-  }
-  function compose(...args) {
-    return args.reduce((a, b) => {
-      return function() {
-        return a().then(() => {
-          return b();
-        });
-      };
-    });
-  }
-
-  rlp.on('close', function () {
-
+  var step2 = read('do you need demo, continue? [y/N]', function (ok) {
+    if (ok) {
+      program.demo = true;
+    }
   });
-
+  var a = compose(step1, step2);
   // Generate application
   emptyDirectory(destinationPath, function(empty) {
-    var total;
-    var step1 = read('do you need test? [y/N]', function (ok) {
+    var step3 = read('destination is not empty, continue? [y/N] ', function(ok) {
       if (ok) {
-        program.test = true;
-      }
-    });
-    var step2 = read('do you need demo? [y/N]', function (ok) {
-      if (ok) {
-        program.demo = true;
-      }
-    });
-    var step3 = read('destination is not empty, continue? [Y/N] ', function(ok) {
-      console.log('ok---', ok);
-      if (ok) {
-        process.stdin.destroy();
+      //   process.stdin.destroy();
         createApplication(appName, destinationPath);
       } else {
         console.error('aborting');
@@ -127,74 +107,58 @@ function main() {
       }
     });
     if (empty || program.force) {
-      var a = compose(step1, step2);
-      compose(a, close)();
-      createApplication(appName, destinationPath);
+      compose(a, close)().then(() => {
+        createApplication(appName, destinationPath);
+      });
     } else {
-      var a = compose(step1, step2, step3)();
-      // compose(a, close)();
+      compose(a, step3, close)();
     }
   });
 }
 /**
  * Display a warning similar to how errors are displayed by commander.
- *
  * @param {String} message
  */
  function warning (message) {
-  console.error();
   message.split('\n').forEach(function (line) {
     console.error('  warning: %s', line);
   });
-  console.error();
  }
-
 /**
  * Determine if launched from cmd.exe
  */
-
 function launchedFromCmd () {
   return process.platform === 'win32' &&
     process.env._ === undefined
 }
-
 /**
  * Create application at the given directory `path`.
- *
  * @param {String} path
  */
  function createApplication(name, path) {
-  var wait = 2;
-  function complete() {
-    if (--wait) {
-      return;
-    }
-    console.log();
-    var prompt = launchedFromCmd() ? '>' : '$';
-    console.log('   install dependencies:');
-    console.log('     %s cd %s && npm install', prompt, path);
-    console.log();
-    console.log('   run the app:');
-    // if (launchedFromCmd()) {
-    //   console.log('     %s SET DEBUG=%s:* & npm start', prompt, name);
-    // } else {
-    //   console.log('     %s DEBUG=%s:* npm start', prompt, name);
-    // }
-    // console.log();
-  }
-
-
+  // var wait = 2;
+  // function complete() {
+  //   if (--wait) {
+  //     return;
+  //   }
+  //   var prompt = launchedFromCmd() ? '>' : '$';
+  //   console.log('   install dependencies:');
+  //   console.log('     %s cd %s && npm install', prompt, path);
+  // }
   mkdir(path, function () {
-        // test
-        mkdir(path + '/test');
-    // index.js
-    copyTemplate('js/index.js', path + '/src/index.js');
-    // README
-    copyTemplate('md/README.md', path + '/README.md');
-    //.eslintrc
-    copyTemplate('eslint/eslintrc', path + '/.eslintrc');
-    //.babelrc
-    copyTemplate('babel/babelrc', path + '/.babelrc');
+    // test
+    if (program.test) {
+      mkdir(path + '/test');
+    }
+    // demo
+    if (program.demo) {
+      mkdir(path + '/demo', function () {
+        copyTemplate('html/index.html', path + '/demo/index.html');
+      });
+    }
+    if (program.git) {
+      copyTemplate('js/gitignore', path + '/.gitignore')
+    }
     // src
     mkdir(path + '/src', function () {
       mkdir(path + '/src/img');
@@ -208,46 +172,44 @@ function launchedFromCmd () {
           copyTemplate('css/style.less', path + '/src/index.less');
           break;
         }
-        complete();
+        // complete();
       });
-
     });
+    // index.js
+    copyTemplate('js/index.js', path + '/src/index.js');
+    // README
+    copyTemplate('md/README.md', path + '/README.md');
+    //.eslintrc
+    copyTemplate('eslint/eslintrc', path + '/.eslintrc');
+    //.babelrc
+    copyTemplate('babel/babelrc', path + '/.babelrc');
+    // package.json
+    var pkg = {
+      "name": name,
+      "version": "0.0.0",
+      "main": 'dist/index.js',
+      "scripts": {
+        "test": ''
+      },
+      "dependencies": {
+      },
+      "devDependencies": {
+        "babel-loader": "7.0.0",
+        "babel-core": "6.25.0",
+        "babel-preset-es2015": "6.24.1",
+      }
+    }
+    // write files
+    write(path + '/package.json', JSON.stringify(pkg, null, 2) + '\n');
+    // complete();
   });
 
-  if (program.demo) {
-    mkdir(path + '/demo', function () {
-      copyTemplate('html/index.html', path + '/demo/index.html');
-      complete();
-    });
-  }
-  // package.json
-  var pkg = {
-    "name": name,
-    "version": "0.0.0",
-    "main": 'dist/index.js',
-    "scripts": {
-      "test": ''
-    },
-    "dependencies": {
-    },
-    "devDependencies": {
-      "babel-loader": "7.0.0",
-      "babel-core": "6.25.0",
-      "babel-preset-es2015": "6.24.1",
-    }
-  }
-  // write files
-  write(path + '/package.json', JSON.stringify(pkg, null, 2) + '\n');
-
-  if (program.git) {
-    copyTemplate('js/gitignore', path + '/.gitignore')
-  }
-  complete();
+  var prompt = launchedFromCmd() ? '>' : '$';
+  console.log('   install dependencies:');
+  console.log('     %s cd %s && npm install', prompt, path);
 }
-
 /**
  * echo str > path.
- *
  * @param {String} path
  * @param {String} str
  */
@@ -255,7 +217,6 @@ function launchedFromCmd () {
   fs.writeFileSync(path, str, { mode: mode || MODE_0666 });
   console.log('   \x1b[36mcreate\x1b[0m : ' + path);
  } 
-
 /**
  * Copy file from template directory.
  */
@@ -263,7 +224,6 @@ function copyTemplate (from, to) {
   from = path.join(__dirname, '..', 'templates', from);
   write(to, fs.readFileSync(from, 'utf-8'));
 }
-
 /**
  * Mkdir -p.
  *
@@ -279,7 +239,6 @@ function copyTemplate (from, to) {
     fn && fn();
   });
  }
-
  /**
  * Load template file.
  */
@@ -295,7 +254,6 @@ function loadTemplate (name) {
     render: render
   }
 }
-
 // /**
 // * Prompt for confirmation on STDOUT/STDIN 
 // */
@@ -310,8 +268,6 @@ function loadTemplate (name) {
 //     callback(/^y|yes|ok|true$/i.test(input));
 //   });
 // }
-
-
 /**
 *Check if the given directory 'path' is empty
 ×
@@ -324,7 +280,6 @@ function emptyDirectory(path, fn) {
     fn(!files || !files.length);
   })
 }
-
 /**
  * Graceful exit for async STDIO
  */
@@ -337,22 +292,16 @@ function exit(code) {
       _exit(code);
     }
   }
-
   var draining = 0;
   var stream = [process.stdout, process.stderr];
-
   exit.exited = true;
-
   stream.forEach(function (stream) {
     // submit empty write request and wait for completion
     draining += 1;
     stream.write('', done);
   });
-
   done();
 }
-
-
 /**
  * Create an app name from a directory path, fitting npm naming requirements.
  *
@@ -364,7 +313,6 @@ function createAppName(pathName) {
     .replace(/^[-_.]+|-+$/g, '')
     .toLowerCase()
 }
-
 /**
  * Generate a callback function for commander to warn about renamed option.
  *
@@ -377,7 +325,3 @@ function renamedOption(originName, newName) {
     return val;
   }
 }
-
-
-
-

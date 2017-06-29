@@ -41,9 +41,8 @@ if (typeof dirValue == 'undefined') {
 main();
 
 function main() {
-  // const curName = program.args.shift();
-  // const destinationPath = `/home/${process.env.USER}/devspace/${curName}`;
-  const destinationPath = program.args.shift();
+  const curName = program.args.shift();
+  const destinationPath = `/home/${process.env.USER}/devspace/${curName}`;
   const appName = createAppName(path.resolve(destinationPath));
   var step1 = read(info(`do you need test, continue? [y/N] `), (ok, next) => {
     if (ok) {

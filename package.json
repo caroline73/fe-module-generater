@@ -1,6 +1,6 @@
 {
   "name": "pgc-fe-generator",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "generater templates",
   "main": "bin/generater",
   "repository": {
@@ -8,7 +8,8 @@
     "url": "git@git.pandatv.com:zhangshaohui/pgc-fe-generator.git"
   },
   "bin": {
-    "generate": "bin/generater"
+    "generate": "bin/generater",
+    "gen": "bin/generater"
   },
   "keywords": [
     "generater",

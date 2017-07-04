@@ -56,7 +56,12 @@ function main() {
     }
     next();
   });
-  const a = compose(step1, step2);
+  var step3 = read(info(`do you need .gitignore, continue? [y/N] `), (ok, next) => {
+    if (ok) {
+      program.git = true;
+    }
+  });
+  const a = compose(step1, step2, step3);
   emptyDirectory(destinationPath, function(empty) {
     var step3 = read(info(`destination is not empty, continue? [y/N] `), (ok, next) => {
       if (ok) {
@@ -104,10 +109,10 @@ function createApplication(name, path) {
       mkdir(path + '/src/modules', function () {
         // index.less/index.css
         switch (program.css) {
-          case 'css': 
+          case 'css':
           copyTemplate('css/style.css', path + '/src/index.css');
           break;
-          default: 
+          default:
           copyTemplate('css/style.less', path + '/src/index.less');
           break;
         }

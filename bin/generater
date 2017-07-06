@@ -105,6 +105,7 @@ function createApplication(name, path) {
     }
     // src
     mkdir(path + '/src', function () {
+      mkdir(path + '/src/common');
       mkdir(path + '/src/img');
       mkdir(path + '/src/modules', function () {
         // index.less/index.css

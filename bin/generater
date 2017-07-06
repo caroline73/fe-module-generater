@@ -60,6 +60,7 @@ function main() {
     if (ok) {
       program.git = true;
     }
+    next();
   });
   const a = compose(step1, step2, step3);
   emptyDirectory(destinationPath, function(empty) {
@@ -100,9 +101,6 @@ function createApplication(name, path) {
         copyTemplate('html/index.html', path + '/demo/index.html');
       });
     }
-    if (program.git) {
-      copyTemplate('js/gitignore', path + '/.gitignore');
-    }
     // src
     mkdir(path + '/src', function () {
       mkdir(path + '/src/common');
@@ -119,6 +117,9 @@ function createApplication(name, path) {
         }
       });
     });
+    if (program.git) {
+      copyTemplate('js/gitignore', path + '/.gitignore');
+    }
     // index.js
     copyTemplate('js/index.js', path + '/src/index.js');
     // README

@@ -8,11 +8,11 @@
     "url": "git@git.pandatv.com:zhangshaohui/pgc-fe-generator.git"
   },
   "bin": {
-    "generator": "bin/generater",
-    "gen": "bin/generater"
+    "generator": "bin/generator",
+    "gen": "bin/generator"
   },
   "keywords": [
-    "generater",
+    "generator",
     "npm",
     "module",
     "dir"

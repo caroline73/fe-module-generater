@@ -102,8 +102,17 @@ function createApplication(name, path) {
       });
     }
     // src
+    const source_dir = 'templates/css/common-less';
+    const dest_dir = path + '/src/common/';
     mkdir(path + '/src', function () {
-      mkdir(path + '/src/common');
+      mkdir(path + '/src/common', function() {
+        exec(`cp -r ${source_dir} ${dest_dir}`, (err, stdout, stderr) => {
+          if (err) {
+            console.error(error(`exec error: ${err}`));
+            return;
+          }
+        });
+      });
       mkdir(path + '/src/img');
       mkdir(path + '/src/modules', function () {
         // index.less/index.css

@@ -1,0 +1,6 @@
+.height-border-block(@height, @border-width, @border-color) {
+  height: @height;
+  line-height: unit(unit(@height)-(unit(@border-width))*2 , px);
+  line-height: ~'@{height}\9';
+  border: @border-width solid @border-color;
+}

@@ -1,0 +1,8 @@
+// Opacity
+
+.opacity(@opacity) {
+  @opacityIE: @opacity * 100;
+  -ms-filter: ~"progid:DXImageTransform.Microsoft.Alpha(Opacity=@{opacityIE})";
+  filter: ~"alpha(opacity=@{opacityIE})";
+  opacity: @opacity;
+}

@@ -114,6 +114,7 @@ function createApplication(name, path) {
         });
       });
       mkdir(path + '/src/img');
+      mkdir(path + '/src/helpers');
       mkdir(path + '/src/modules', function () {
         // index.less/index.css
         switch (program.css) {

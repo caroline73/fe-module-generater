@@ -132,6 +132,8 @@ function createApplication(name, path) {
     }
     // index.js
     copyTemplate('js/index.js', path + '/src/index.js');
+    // index.hbs
+    copyTemplate('hbs/index.hbs', path + '/src/index.hbs');
     // README
     copyTemplate('md/README.md', path + '/README.md');
     //.eslintrc

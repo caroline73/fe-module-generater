@@ -127,6 +127,9 @@ function createApplication(name, path) {
         }
       });
     });
+    mkdir(path + '/conf', function () {
+      copyTemplate('conf/tpl_ngx.conf', path + '/conf/' + process.env.USER + '_' + name + '_ngx.conf');
+    });
     if (program.git) {
       copyTemplate('js/gitignore', path + '/.gitignore');
     }
@@ -141,7 +144,7 @@ function createApplication(name, path) {
     //.babelrc
     copyTemplate('babel/babelrc', path + '/.babelrc');
     // package.json
-    fs.writeFileSync(path + '/package.json', ejsTemplate('js/package.json.ejs', {'name': name}));
+    fs.writeFileSync(path + '/package.json', ejsTemplate('js/package.json', {'name': name}));
   });
 }
 
@@ -214,6 +217,5 @@ function emptyDirectory(path, fn) {
 
 function createAppName(pathName) {
   return path.basename(pathName)
-    .replace(/[^\\\/\*\?\|\<\>\:]+/g, '-')
     .toLowerCase();
 }

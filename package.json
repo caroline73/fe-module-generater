@@ -1,6 +1,6 @@
 {
   "name": "pgc-fe-generator",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "generater templates",
   "main": "bin/generater",
   "repository": {

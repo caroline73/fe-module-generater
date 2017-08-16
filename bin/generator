@@ -141,7 +141,7 @@ function createApplication(name, path) {
     //.babelrc
     copyTemplate('babel/babelrc', path + '/.babelrc');
     // package.json
-    fs.writeFileSync(path + '/package.json', ejsTemplate('js/package.json', {'name': name}));
+    fs.writeFileSync(path + '/package.json', ejsTemplate('js/package.json.ejs', {'name': name}));
   });
 }
 

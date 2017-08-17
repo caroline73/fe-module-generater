@@ -128,7 +128,7 @@ function createApplication(name, path) {
       });
     });
     mkdir(path + '/conf', function () {
-      copyTemplate('conf/tpl_ngx.conf', path + '/conf/' + process.env.USER + '_' + name + '_ngx.conf');
+      copyTemplate('conf/tpl_ngx.conf', path + '/conf/' + 'tpl_' + name + '_ngx.conf');
     });
     if (program.git) {
       copyTemplate('js/gitignore', path + '/.gitignore');
@@ -148,7 +148,7 @@ function createApplication(name, path) {
   });
 }
 
-var rlp = readline.createInterface({
+const rlp = readline.createInterface({
   input:process.stdin,
   output:process.stdout
 });
